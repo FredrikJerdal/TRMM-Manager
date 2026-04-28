@@ -892,8 +892,11 @@ struct ContentView: View {
             return
         }
 
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 15
+
         do {
-            let (data, response) = try await URLSession.shared.data(from: url)
+            let (data, response) = try await URLSession.shared.data(for: request)
             if let http = response as? HTTPURLResponse, http.statusCode != 200 {
                 return
             }
@@ -1020,7 +1023,7 @@ struct ContentView: View {
         errorMessage = nil
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.timeoutInterval = 45
+        request.timeoutInterval = 15
         request.addDefaultHeaders(apiKey: KeychainHelper.shared.getAPIKey() ?? "")
         DiagnosticLogger.shared.logHTTPRequest(
             method: "GET",
@@ -1916,6 +1919,7 @@ struct AgentDetailView: View {
     @State private var pendingPowerAction: PowerActionType?
     @AppStorage("hideSensitive") private var hideSensitiveInfo: Bool = false
     @State private var hasLoadedDetailsOnce: Bool = false
+    @State private var showAudit: Bool = false
     
     var effectiveAPIKey: String {
         return KeychainHelper.shared.getAPIKey() ?? apiKey
@@ -2379,6 +2383,8 @@ struct AgentDetailView: View {
                         )
                     }
                     .buttonStyle(.plain)
+                    .frame(minWidth: 0, maxWidth: .infinity)
+                    .layoutPriority(1)
                     .frame(maxWidth: .infinity)
                 }
 
@@ -2411,6 +2417,8 @@ struct AgentDetailView: View {
                         )
                     }
                     .buttonStyle(.plain)
+                    .frame(minWidth: 0, maxWidth: .infinity)
+                    .layoutPriority(1)
 
                     NavigationLink {
                         SendCommandView(
@@ -2428,6 +2436,7 @@ struct AgentDetailView: View {
                         )
                     }
                     .buttonStyle(.plain)
+                    .frame(maxWidth: .infinity)
 
                     NavigationLink {
                         AgentSoftwareView(
@@ -2445,6 +2454,7 @@ struct AgentDetailView: View {
                         )
                     }
                     .buttonStyle(.plain)
+                    .frame(maxWidth: .infinity)
                     .opacity(softwareManagementSupported ? 1.0 : 0.45)
                     .allowsHitTesting(softwareManagementSupported)
 
@@ -2459,6 +2469,7 @@ struct AgentDetailView: View {
                         )
                     }
                     .buttonStyle(.plain)
+                    .frame(maxWidth: .infinity)
                     .opacity(nonEmptyCustomFields.isEmpty ? 0.45 : 1.0)
                     .allowsHitTesting(!nonEmptyCustomFields.isEmpty)
 
@@ -2477,6 +2488,7 @@ struct AgentDetailView: View {
                         )
                     }
                     .buttonStyle(.plain)
+                    .frame(maxWidth: .infinity)
 
                     NavigationLink {
                         AgentHistoryView(
@@ -2493,6 +2505,7 @@ struct AgentDetailView: View {
                         )
                     }
                     .buttonStyle(.plain)
+                    .frame(maxWidth: .infinity)
 
                     NavigationLink {
                         AgentTasksView(
@@ -2528,22 +2541,36 @@ struct AgentDetailView: View {
 
                 }
 
-                NavigationLink {
-                    RunScriptView(
-                        agent: agent,
-                        baseURL: baseURL,
-                        apiKey: effectiveAPIKey
-                    )
-                } label: {
-                    AgentActionTile(
-                        title: L10n.key("agents.management.runScript.title"),
-                        subtitle: L10n.key("agents.management.runScript.subtitle"),
-                        systemImage: "play.rectangle.on.rectangle.fill",
-                        tint: Color.pink
-                    )
+                LazyVGrid(columns: columns, spacing: 16) {
+                    NavigationLink {
+                        RunScriptView(
+                            agent: agent,
+                            baseURL: baseURL,
+                            apiKey: effectiveAPIKey
+                        )
+                    } label: {
+                        AgentActionTile(
+                            title: L10n.key("agents.management.runScript.title"),
+                            subtitle: L10n.key("agents.management.runScript.subtitle"),
+                            systemImage: "play.rectangle.on.rectangle.fill",
+                            tint: Color.pink
+                        )
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
+                        showAudit = true
+                    } label: {
+                        AgentActionTile(
+                            title: L10n.key("agents.management.audit.title"),
+                            subtitle: L10n.key("agents.management.audit.subtitle"),
+                            systemImage: "magnifyingglass.circle.fill",
+                            tint: Color.yellow
+                        )
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
-                .frame(maxWidth: .infinity)
+
             }
         }
     }
@@ -2665,7 +2692,7 @@ struct AgentDetailView: View {
                         .minimumScaleFactor(0.7)
                 }
             }
-            .frame(maxWidth: .infinity, minHeight: 84, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: 84, maxHeight: 84, alignment: .leading)
             .padding(14)
             .background(
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -2729,6 +2756,13 @@ struct AgentDetailView: View {
             guard !hasLoadedDetailsOnce else { return }
             hasLoadedDetailsOnce = true
             Task { await fetchAgentDetail() }
+        }
+        .sheet(isPresented: $showAudit) {
+            AgentAuditView(
+                agentId: agent.agent_id,
+                baseURL: baseURL,
+                apiKey: effectiveAPIKey
+            )
         }
     }
 }
@@ -3835,7 +3869,7 @@ struct RunScriptView: View {
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.timeoutInterval = 45
+        request.timeoutInterval = 15
         request.addDefaultHeaders(apiKey: effectiveAPIKey)
         DiagnosticLogger.shared.logHTTPRequest(
             method: "GET",
@@ -5309,7 +5343,7 @@ struct AgentSoftwareView: View {
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.timeoutInterval = 45
+        request.timeoutInterval = 15
         request.addDefaultHeaders(apiKey: token)
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
 
@@ -5464,7 +5498,7 @@ struct AgentSoftwareView: View {
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.timeoutInterval = 45
+        request.timeoutInterval = 15
         request.addDefaultHeaders(apiKey: token)
 
         DiagnosticLogger.shared.logHTTPRequest(
@@ -5554,7 +5588,7 @@ struct AgentSoftwareView: View {
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.timeoutInterval = 45
+        request.timeoutInterval = 15
         request.addDefaultHeaders(apiKey: token)
 
         DiagnosticLogger.shared.logHTTPRequest(
@@ -5647,7 +5681,7 @@ struct AgentSoftwareView: View {
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.timeoutInterval = 45
+        request.timeoutInterval = 15
         request.addDefaultHeaders(apiKey: token)
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
 
@@ -6246,24 +6280,22 @@ struct AgentHistoryView: View {
     }
 
     private var historyListCard: some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 16) {
-                if history.isEmpty && !isLoading && errorMessage == nil {
-                    Text(L10n.key("agents.history.empty"))
-                        .font(.footnote)
-                        .foregroundStyle(Color.white.opacity(0.65))
-                } else {
-                    LazyVStack(spacing: 14) {
-                        ForEach(history) { entry in
-                            HistoryTile(
-                                entry: entry,
-                                formattedTime: formattedDate(entry.time),
-                                onShowOutput: { selectedOutputEntry = entry }
-                            )
-                        }
+        VStack(alignment: .leading, spacing: 16) {
+            if history.isEmpty && !isLoading && errorMessage == nil {
+                Text(L10n.key("agents.history.empty"))
+                    .font(.footnote)
+                    .foregroundStyle(Color.white.opacity(0.65))
+            } else {
+                LazyVStack(spacing: 14) {
+                    ForEach(history) { entry in
+                        HistoryTile(
+                            entry: entry,
+                            formattedTime: formattedDate(entry.time),
+                            onShowOutput: { selectedOutputEntry = entry }
+                        )
                     }
-                    .animation(.easeInOut(duration: 0.25), value: history.count)
                 }
+                .animation(.easeInOut(duration: 0.25), value: history.count)
             }
         }
     }
@@ -6524,7 +6556,11 @@ struct AgentHistoryView: View {
             if let httpResponse = response as? HTTPURLResponse {
                 DiagnosticLogger.shared.logHTTPResponse(method: "GET", url: url.absoluteString, status: httpResponse.statusCode, data: data)
                 guard httpResponse.statusCode == 200 else {
-                    errorMessage = L10n.format("common.httpErrorFormat", httpResponse.statusCode)
+                    if httpResponse.statusCode == 403 {
+                        errorMessage = L10n.key("agents.management.history.permission")
+                    } else {
+                        errorMessage = L10n.format("common.httpErrorFormat", httpResponse.statusCode)
+                    }
                     DiagnosticLogger.shared.appendError("HTTP Error \(httpResponse.statusCode) in fetching history.")
                     isLoading = false
                     return

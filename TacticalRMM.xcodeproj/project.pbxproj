@@ -199,7 +199,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1620;
-				LastUpgradeCheck = 2620;
+				LastUpgradeCheck = 2630;
 				TargetAttributes = {
 					5A0248A12D71D5780052F3A8 = {
 						CreatedOnToolsVersion = 16.2;
@@ -303,6 +303,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -369,6 +370,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -453,7 +455,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.7.5;
+				MARKETING_VERSION = 0.7.8;
 				PRODUCT_BUNDLE_IDENTIFIER = "jerdal.TacticalRMM-Manager";
 				PRODUCT_NAME = "TRMM Manager";
 				REGISTER_APP_GROUPS = YES;
@@ -497,7 +499,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.7.5;
+				MARKETING_VERSION = 0.7.8;
 				PRODUCT_BUNDLE_IDENTIFIER = "jerdal.TacticalRMM-Manager";
 				PRODUCT_NAME = "TRMM Manager";
 				REGISTER_APP_GROUPS = YES;

@@ -315,3 +315,34 @@ struct RMMClientSite: Identifiable, Decodable {
         case clientName = "client_name"
     }
 }
+
+struct AuditLogResponse: Decodable {
+    let audit_logs: [AuditLog]
+    let total: Int
+}
+
+struct AuditLog: Identifiable, Decodable {
+    let id: Int
+    let entry_time: String
+    let ip_address: String
+    let site: AuditSite
+    let username: String
+    let agent: String
+    let agent_id: String
+    let action: String
+    let object_type: String
+    let before_value: String?
+    let after_value: String?
+    let message: String
+    let debug_info: AuditDebugInfo?
+}
+
+struct AuditSite: Decodable {
+    let id: Int
+    let name: String
+    let client_name: String
+}
+
+struct AuditDebugInfo: Decodable {
+    let ip: String?
+}

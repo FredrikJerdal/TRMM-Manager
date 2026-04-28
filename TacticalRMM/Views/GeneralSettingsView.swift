@@ -769,7 +769,7 @@ struct GeneralSettingsView: View {
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.timeoutInterval = 45
+        request.timeoutInterval = 15
         request.addDefaultHeaders(apiKey: apiKey)
 
         DiagnosticLogger.shared.logHTTPRequest(
@@ -886,7 +886,7 @@ struct GeneralSettingsView: View {
 
         var request = URLRequest(url: url)
         request.httpMethod = "PUT"
-        request.timeoutInterval = 45
+        request.timeoutInterval = 15
         request.addDefaultHeaders(apiKey: apiKey)
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = fullPayload
@@ -985,7 +985,7 @@ struct GeneralSettingsView: View {
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.timeoutInterval = 45
+        request.timeoutInterval = 15
         request.addDefaultHeaders(apiKey: apiKey)
 
         DiagnosticLogger.shared.logHTTPRequest(

@@ -596,7 +596,7 @@ struct DeploymentsView: View {
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.timeoutInterval = 45
+        request.timeoutInterval = 15
         request.addDefaultHeaders(apiKey: apiKey)
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
@@ -695,7 +695,7 @@ struct DeploymentsView: View {
 
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
-        request.timeoutInterval = 45
+        request.timeoutInterval = 15
         request.addDefaultHeaders(apiKey: apiKey)
 
         DiagnosticLogger.shared.logHTTPRequest(
@@ -797,7 +797,7 @@ struct DeploymentsView: View {
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.timeoutInterval = 45
+        request.timeoutInterval = 15
         request.addDefaultHeaders(apiKey: apiKey)
 
         DiagnosticLogger.shared.logHTTPRequest(
@@ -893,7 +893,7 @@ struct DeploymentsView: View {
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.timeoutInterval = 45
+        request.timeoutInterval = 15
         request.addDefaultHeaders(apiKey: apiKey)
 
         DiagnosticLogger.shared.logHTTPRequest(

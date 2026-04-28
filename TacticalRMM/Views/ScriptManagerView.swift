@@ -705,7 +705,7 @@ struct ScriptManagerView: View {
 
         var request = URLRequest(url: url)
         request.httpMethod = method
-        request.timeoutInterval = 45
+        request.timeoutInterval = 15
         request.addDefaultHeaders(apiKey: apiKey)
 
         DiagnosticLogger.shared.logHTTPRequest(

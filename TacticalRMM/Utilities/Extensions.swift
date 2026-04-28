@@ -4,6 +4,7 @@ import UIKit
 
 extension URLRequest {
     mutating func addDefaultHeaders(apiKey: String) {
+        timeoutInterval = 15
         addValue("*/*", forHTTPHeaderField: "accept")
         addValue(apiKey, forHTTPHeaderField: "X-API-KEY")
     }

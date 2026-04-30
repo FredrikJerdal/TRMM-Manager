@@ -5,6 +5,7 @@ struct UserAdministrationView: View {
     @Environment(\.appTheme) private var appTheme
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("lastSeenDateFormat") private var lastSeenDateFormat: String = ""
+    @AppStorage("hideSensitive") private var hideSensitiveInfo: Bool = false
 
     @State private var users: [RMMUser] = []
     @State private var roles: [Int: RMMRole] = [:]
@@ -175,6 +176,11 @@ struct UserAdministrationView: View {
     }
 
     private func beginResettingPassword(_ user: RMMUser) {
+        guard !user.isSSOAccount else {
+            resetErrorMessage = "Password reset is not available for SSO accounts."
+            resettingUser = nil
+            return
+        }
         resetPassword = ""
         resetErrorMessage = nil
         isResettingPassword = false
@@ -191,6 +197,10 @@ struct UserAdministrationView: View {
     private func beginViewingSessions(_ user: RMMUser) {
         resetSessionState()
         sessionUser = user
+    }
+
+    private func canResetCredentials(for user: RMMUser) -> Bool {
+        !user.isSSOAccount
     }
 
     private func resetSessionState() {
@@ -689,7 +699,12 @@ struct UserAdministrationView: View {
                         .foregroundStyle(Color.white.opacity(0.65))
                 }
                 Spacer(minLength: 0)
-                statusBadge(isActive: user.isActive)
+                HStack(spacing: 8) {
+                    statusBadge(isActive: user.isActive)
+                    if user.isSSOAccount {
+                        badge(text: "SSO", tint: appTheme.accent.opacity(0.18))
+                    }
+                }
 
                   Menu {
                       Button("Edit", systemImage: "pencil") {
@@ -701,9 +716,11 @@ struct UserAdministrationView: View {
                       Button(L10n.key("Reset Password"), systemImage: "key") {
                           beginResettingPassword(user)
                       }
+                      .disabled(!canResetCredentials(for: user))
                       Button(L10n.key("Reset 2FA"), systemImage: "lock.rotation") {
                           Task { await resetUser2FA(user) }
                       }
+                      .disabled(!canResetCredentials(for: user))
                   } label: {
                     Image(systemName: "ellipsis.circle")
                         .font(.title3)
@@ -718,7 +735,7 @@ struct UserAdministrationView: View {
             infoRow(title: L10n.key("users.field.lastLogin"), value: lastLoginText)
 
             if let ip = user.lastLoginIP, !ip.isEmpty {
-                infoRow(title: L10n.key("users.field.lastLoginIp"), value: ip)
+                infoRow(title: L10n.key("users.field.lastLoginIp"), value: hideSensitiveInfo ? "[REDACTED]" : ip)
             }
 
             HStack(spacing: 8) {

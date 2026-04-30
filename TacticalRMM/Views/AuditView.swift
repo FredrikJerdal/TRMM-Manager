@@ -6,6 +6,7 @@ struct AgentAuditView: View {
     let apiKey: String
     @Environment(\.dismiss) private var dismiss
     @Environment(\.appTheme) private var appTheme
+    @AppStorage("hideSensitive") private var hideSensitiveInfo: Bool = false
     
     @State private var auditLogs: [AuditLog] = []
     @State private var isLoading = false
@@ -118,7 +119,7 @@ struct AgentAuditView: View {
 
                 HStack(spacing: 16) {
                     infoLabel("Object", log.object_type.capitalized)
-                    infoLabel("IP", log.ip_address)
+                    infoLabel("IP", hideSensitiveInfo ? "[REDACTED]" : log.ip_address)
                     Spacer(minLength: 0)
                 }
             }
@@ -184,11 +185,10 @@ struct AgentAuditView: View {
                 "sortBy": "entry_time",
                 "descending": true,
                 "page": 1,
-                "rowsPerPage": 25,
-                "rowsNumber": NSNull()
+                "rowsPerPage": 1000,
+                "rowsNumber": 1000
             ],
-            "agentFilter": [agentId],
-            "timeFilter": 7
+            "agentFilter": [agentId]
         ]
         
         guard let jsonData = try? JSONSerialization.data(withJSONObject: payload) else {
@@ -220,14 +220,95 @@ struct AgentAuditView: View {
                 }
             }
             
-            let decodedResponse = try JSONDecoder().decode(AuditLogResponse.self, from: data)
-            withAnimation(.easeInOut(duration: 0.25)) {
-                auditLogs = decodedResponse.audit_logs
+            do {
+                let decodedResponse = try JSONDecoder().decode(AuditLogResponse.self, from: data)
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    auditLogs = decodedResponse.audit_logs
+                }
+                DiagnosticLogger.shared.append("Fetched \(decodedResponse.audit_logs.count) audit logs for agent \(agentId)")
+            } catch {
+                let responseBody = String(data: data, encoding: .utf8) ?? "<unable to decode response body>"
+                let diagnostic = """
+                MALFORMED /logs/audit/ RESPONSE
+                Error: \(describeDecodingError(error))
+                Expected: { audit_logs: [AuditLog], total: Int } with audit_log fields: id, entry_time, ip_address, site { id, name, client_name }, username, agent, agent_id, action, object_type, before_value, after_value, message, debug_info
+                Got: \(summarizeAuditPayloadShape(from: data))
+                Full Response JSON:
+                \(responseBody)
+                """
+                errorMessage = L10n.key("agents.management.audit.decodeError")
+                DiagnosticLogger.shared.appendError(diagnostic)
             }
-            DiagnosticLogger.shared.append("Fetched \(decodedResponse.audit_logs.count) audit logs for agent \(agentId)")
         } catch {
             errorMessage = error.localizedDescription
             DiagnosticLogger.shared.appendError("Error fetching audit logs: \(error.localizedDescription)")
+        }
+    }
+
+    private func describeDecodingError(_ error: Error) -> String {
+        guard let decErr = error as? DecodingError else {
+            return error.localizedDescription
+        }
+
+        switch decErr {
+        case .keyNotFound(let key, let context):
+            let path = context.codingPath.map { $0.stringValue }.joined(separator: ".")
+            return "Missing key '\(key.stringValue)' at \(path.isEmpty ? "root" : path): \(context.debugDescription)"
+        case .typeMismatch(let type, let context):
+            let path = context.codingPath.map { $0.stringValue }.joined(separator: ".")
+            return "Type mismatch for \(type) at \(path.isEmpty ? "root" : path): \(context.debugDescription)"
+        case .valueNotFound(let type, let context):
+            let path = context.codingPath.map { $0.stringValue }.joined(separator: ".")
+            return "Missing value for \(type) at \(path.isEmpty ? "root" : path): \(context.debugDescription)"
+        case .dataCorrupted(let context):
+            let path = context.codingPath.map { $0.stringValue }.joined(separator: ".")
+            return "Corrupted data at \(path.isEmpty ? "root" : path): \(context.debugDescription)"
+        @unknown default:
+            return error.localizedDescription
+        }
+    }
+
+    private func summarizeAuditPayloadShape(from data: Data) -> String {
+        guard let jsonObject = try? JSONSerialization.jsonObject(with: data) else {
+            return "<non-JSON response>"
+        }
+
+        guard let dictionary = jsonObject as? [String: Any] else {
+            return "Top-level type: \(type(of: jsonObject))"
+        }
+
+        var parts: [String] = ["Top-level keys: \(dictionary.keys.sorted().joined(separator: ", "))"]
+        if let logs = dictionary["audit_logs"] as? [[String: Any]] {
+            parts.append("audit_logs count: \(logs.count)")
+            if let first = logs.first {
+                parts.append("first audit_log keys: \(first.keys.sorted().joined(separator: ", "))")
+                if let before = first["before_value"] {
+                    parts.append("before_value type: \(typeName(before))")
+                }
+                if let after = first["after_value"] {
+                    parts.append("after_value type: \(typeName(after))")
+                }
+            }
+        }
+        return parts.joined(separator: " | ")
+    }
+
+    private func typeName(_ value: Any) -> String {
+        switch value {
+        case is NSNull:
+            return "null"
+        case is [String: Any]:
+            return "object"
+        case is [Any]:
+            return "array"
+        case is String:
+            return "string"
+        case is Bool:
+            return "bool"
+        case is Int, is Double, is Float, is NSNumber:
+            return "number"
+        default:
+            return String(describing: type(of: value))
         }
     }
 }

@@ -319,6 +319,98 @@ struct RMMClientSite: Identifiable, Decodable {
 struct AuditLogResponse: Decodable {
     let audit_logs: [AuditLog]
     let total: Int
+
+    private enum CodingKeys: String, CodingKey {
+        case audit_logs
+        case results
+        case total
+        case count
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        audit_logs = try container.decodeIfPresent([AuditLog].self, forKey: .audit_logs)
+            ?? container.decodeIfPresent([AuditLog].self, forKey: .results)
+            ?? []
+        total = try container.decodeIfPresent(Int.self, forKey: .total)
+            ?? container.decodeIfPresent(Int.self, forKey: .count)
+            ?? audit_logs.count
+    }
+}
+
+enum AuditJSONValue: Codable, Hashable, CustomStringConvertible {
+    case null
+    case bool(Bool)
+    case int(Int)
+    case double(Double)
+    case string(String)
+    case array([AuditJSONValue])
+    case object([String: AuditJSONValue])
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+
+        if container.decodeNil() {
+            self = .null
+        } else if let value = try? container.decode(Bool.self) {
+            self = .bool(value)
+        } else if let value = try? container.decode(Int.self) {
+            self = .int(value)
+        } else if let value = try? container.decode(Double.self) {
+            self = .double(value)
+        } else if let value = try? container.decode(String.self) {
+            self = .string(value)
+        } else if let value = try? container.decode([AuditJSONValue].self) {
+            self = .array(value)
+        } else if let value = try? container.decode([String: AuditJSONValue].self) {
+            self = .object(value)
+        } else {
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Unsupported audit JSON value")
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .null:
+            try container.encodeNil()
+        case .bool(let value):
+            try container.encode(value)
+        case .int(let value):
+            try container.encode(value)
+        case .double(let value):
+            try container.encode(value)
+        case .string(let value):
+            try container.encode(value)
+        case .array(let value):
+            try container.encode(value)
+        case .object(let value):
+            try container.encode(value)
+        }
+    }
+
+    var description: String {
+        switch self {
+        case .null:
+            return "null"
+        case .bool(let value):
+            return String(value)
+        case .int(let value):
+            return String(value)
+        case .double(let value):
+            return String(value)
+        case .string(let value):
+            return value
+        case .array(let value):
+            return "[\(value.map { $0.description }.joined(separator: ", "))]"
+        case .object(let value):
+            let rendered = value
+                .map { "\($0.key): \($0.value.description)" }
+                .sorted()
+                .joined(separator: ", ")
+            return "{\(rendered)}"
+        }
+    }
 }
 
 struct AuditLog: Identifiable, Decodable {
@@ -331,18 +423,83 @@ struct AuditLog: Identifiable, Decodable {
     let agent_id: String
     let action: String
     let object_type: String
-    let before_value: String?
-    let after_value: String?
+    let before_value: AuditJSONValue?
+    let after_value: AuditJSONValue?
     let message: String
     let debug_info: AuditDebugInfo?
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case entry_time
+        case ip_address
+        case site
+        case username
+        case agent
+        case agent_id
+        case action
+        case object_type
+        case before_value
+        case after_value
+        case message
+        case debug_info
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(Int.self, forKey: .id) ?? 0
+        entry_time = try container.decodeIfPresent(String.self, forKey: .entry_time) ?? ""
+        ip_address = try container.decodeIfPresent(String.self, forKey: .ip_address) ?? ""
+        site = try container.decodeIfPresent(AuditSite.self, forKey: .site) ?? AuditSite(id: 0, name: "Unknown Site", client_name: "Unknown Client")
+        username = try container.decodeIfPresent(String.self, forKey: .username) ?? ""
+        agent = try container.decodeIfPresent(String.self, forKey: .agent) ?? ""
+        agent_id = try container.decodeIfPresent(String.self, forKey: .agent_id) ?? ""
+        action = try container.decodeIfPresent(String.self, forKey: .action) ?? ""
+        object_type = try container.decodeIfPresent(String.self, forKey: .object_type) ?? ""
+        before_value = try container.decodeIfPresent(AuditJSONValue.self, forKey: .before_value)
+        after_value = try container.decodeIfPresent(AuditJSONValue.self, forKey: .after_value)
+        message = try container.decodeIfPresent(String.self, forKey: .message) ?? ""
+        debug_info = try container.decodeIfPresent(AuditDebugInfo.self, forKey: .debug_info)
+    }
 }
 
 struct AuditSite: Decodable {
     let id: Int
     let name: String
     let client_name: String
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case client_name
+    }
+
+    init(id: Int, name: String, client_name: String) {
+        self.id = id
+        self.name = name
+        self.client_name = client_name
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(Int.self, forKey: .id) ?? 0
+        name = try container.decodeIfPresent(String.self, forKey: .name) ?? "Unknown Site"
+        client_name = try container.decodeIfPresent(String.self, forKey: .client_name) ?? "Unknown Client"
+    }
 }
 
 struct AuditDebugInfo: Decodable {
     let ip: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case ip
+    }
+
+    init(ip: String? = nil) {
+        self.ip = ip
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        ip = try container.decodeIfPresent(String.self, forKey: .ip)
+    }
 }

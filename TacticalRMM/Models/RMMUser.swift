@@ -101,6 +101,10 @@ struct RMMUser: Identifiable, Decodable, Hashable {
         case socialAccounts = "social_accounts"
     }
 
+    var isSSOAccount: Bool {
+        (socialAccounts?.isEmpty == false)
+    }
+
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         

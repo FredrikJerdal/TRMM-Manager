@@ -774,6 +774,29 @@ struct UserAdministrationView: View {
         roles[roleID]?.displayName ?? "Role \(roleID)"
     }
 
+    private func describeDecodingError(_ error: Error) -> String {
+        guard let decErr = error as? DecodingError else {
+            return "Unknown error: \(error.localizedDescription)"
+        }
+        
+        switch decErr {
+        case .keyNotFound(let key, let ctx):
+            let path = ctx.codingPath.map { $0.stringValue }.joined(separator: ".")
+            return "Missing required key '\(key.stringValue)' at path: \(path.isEmpty ? "root" : path)"
+        case .typeMismatch(let type, let ctx):
+            let path = ctx.codingPath.map { $0.stringValue }.joined(separator: ".")
+            return "Type mismatch - expected \(type) at path: \(path.isEmpty ? "root" : path). Debug description: \(ctx.debugDescription)"
+        case .valueNotFound(let type, let ctx):
+            let path = ctx.codingPath.map { $0.stringValue }.joined(separator: ".")
+            return "Missing value of type \(type) at path: \(path.isEmpty ? "root" : path)"
+        case .dataCorrupted(let ctx):
+            let path = ctx.codingPath.map { $0.stringValue }.joined(separator: ".")
+            return "Data corruption at path: \(path.isEmpty ? "root" : path). \(ctx.debugDescription)"
+        @unknown default:
+            return "Unknown decoding error: \(error.localizedDescription)"
+        }
+    }
+
     @MainActor
     private func saveEditedUser() async {
         guard let original = editingUser else { return }
@@ -1158,7 +1181,23 @@ struct UserAdministrationView: View {
                 } catch {
                     errorMessage = "Failed to decode response."
                     users = []
-                    DiagnosticLogger.shared.appendError("Failed to decode users: \(error.localizedDescription)")
+                    
+                    // Comprehensive error logging for malformed JSON
+                    let jsonString = String(data: data, encoding: .utf8) ?? "<unable to decode JSON>"
+                    let truncatedJson = jsonString.count > 2000 ? String(jsonString.prefix(2000)) + "..." : jsonString
+                    
+                    let errorDescription = self.describeDecodingError(error)
+                    
+                    let diagnosticMessage = """
+                    MALFORMED /accounts/users/ RESPONSE
+                    Error: \(errorDescription)
+                    Expected: [RMMUser] array
+                    Expected RMMUser fields: id (Int), username (String), email (String?), is_active (Bool), role (Int?), social_accounts (array?), plus other optional fields
+                    Full Response JSON:
+                    \(truncatedJson)
+                    """
+                    
+                    DiagnosticLogger.shared.appendError(diagnosticMessage)
                 }
             case 403:
                 errorMessage = "You do not have permission to access User Administration."
@@ -1602,7 +1641,7 @@ private struct UserUpdatePayload: Encodable {
     let last_login_ip: String?
     let role: Int?
     let date_format: String?
-    let social_accounts: [Int]
+    let social_accounts: [SocialAccount]
 }
 
 private struct PasswordResetPayload: Encodable {

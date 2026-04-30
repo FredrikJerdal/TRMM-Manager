@@ -1054,9 +1054,11 @@ struct ContentView: View {
                     do {
                         let decodeTask = Task<(agents: [Agent], reportedCount: Int?, usedWrapper: Bool), Error>.detached(priority: .userInitiated) {
                             let decoder = JSONDecoder()
+                            // Try wrapper format first (paginated response)
                             if let page = try? decoder.decode(AgentListResponse.self, from: data) {
                                 return (page.results, page.count, true)
                             }
+                            // Fall back to legacy array format
                             let legacy = try decoder.decode([Agent].self, from: data)
                             return (legacy, nil, false)
                         }
@@ -1075,22 +1077,22 @@ struct ContentView: View {
                             DiagnosticLogger.shared.append("Fetched agents via legacy array: \(agents.count)")
                         }
                     } catch {
-                        if let decErr = error as? DecodingError {
-                            let message: String
-                            switch decErr {
-                            case .keyNotFound(let key, let ctx):
-                                message = "Decoding keyNotFound: \(key.stringValue) at \(ctx.codingPath.map{ $0.stringValue }.joined(separator: "."))"
-                            case .typeMismatch(let type, let ctx):
-                                message = "Decoding typeMismatch: \(type) at \(ctx.codingPath.map{ $0.stringValue }.joined(separator: "."))"
-                            case .valueNotFound(let type, let ctx):
-                                message = "Decoding valueNotFound: \(type) at \(ctx.codingPath.map{ $0.stringValue }.joined(separator: "."))"
-                            case .dataCorrupted(let ctx):
-                                message = "Decoding dataCorrupted at \(ctx.codingPath.map{ $0.stringValue }.joined(separator: "."))"
-                            @unknown default:
-                                message = "Decoding unknown error"
-                            }
-                            DiagnosticLogger.shared.appendError(message)
-                        }
+                        // Comprehensive error logging for malformed JSON
+                        let jsonString = String(data: data, encoding: .utf8) ?? "<unable to decode JSON>"
+                        let truncatedJson = jsonString.count > 2000 ? String(jsonString.prefix(2000)) + "..." : jsonString
+                        
+                        let errorDescription = self.describeDecodingError(error)
+                        
+                        let diagnosticMessage = """
+                        MALFORMED /agents RESPONSE
+                        Error: \(errorDescription)
+                        Expected: AgentListResponse {count: Int?, next: String?, previous: String?, results: [Agent]} OR [Agent] array
+                        Expected Agent fields: agent_id (String), hostname (String), operating_system (String), status (String), cpu_model ([String]), plus optional fields
+                        Full Response JSON:
+                        \(truncatedJson)
+                        """
+                        
+                        DiagnosticLogger.shared.appendError(diagnosticMessage)
                         throw error
                     }
                 case 401:
@@ -1133,6 +1135,29 @@ struct ContentView: View {
 
     private struct APIErrorResponse: Decodable {
         let detail: String
+    }
+
+    private func describeDecodingError(_ error: Error) -> String {
+        guard let decErr = error as? DecodingError else {
+            return "Unknown error: \(error.localizedDescription)"
+        }
+        
+        switch decErr {
+        case .keyNotFound(let key, let ctx):
+            let path = ctx.codingPath.map { $0.stringValue }.joined(separator: ".")
+            return "Missing required key '\(key.stringValue)' at path: \(path.isEmpty ? "root" : path)"
+        case .typeMismatch(let type, let ctx):
+            let path = ctx.codingPath.map { $0.stringValue }.joined(separator: ".")
+            return "Type mismatch - expected \(type) at path: \(path.isEmpty ? "root" : path). Debug description: \(ctx.debugDescription)"
+        case .valueNotFound(let type, let ctx):
+            let path = ctx.codingPath.map { $0.stringValue }.joined(separator: ".")
+            return "Missing value of type \(type) at path: \(path.isEmpty ? "root" : path)"
+        case .dataCorrupted(let ctx):
+            let path = ctx.codingPath.map { $0.stringValue }.joined(separator: ".")
+            return "Data corruption at path: \(path.isEmpty ? "root" : path). \(ctx.debugDescription)"
+        @unknown default:
+            return "Unknown decoding error: \(error.localizedDescription)"
+        }
     }
 
     private func loadDemoAgents() {
@@ -5989,16 +6014,8 @@ struct AgentSoftwareView: View {
                     .foregroundStyle(Color.white.opacity(0.85))
                     .multilineTextAlignment(.leading)
             }
-            .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Color.white.opacity(0.06))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                    )
-            )
+            .padding(.vertical, 2)
         }
 
         private func detailBox(icon: String, text: String) -> some View {
@@ -6012,16 +6029,8 @@ struct AgentSoftwareView: View {
                     .foregroundStyle(Color.white)
                     .multilineTextAlignment(.leading)
             }
-            .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Color.white.opacity(0.08))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .stroke(Color.white.opacity(0.12), lineWidth: 1)
-                    )
-            )
+            .padding(.vertical, 2)
         }
 
         private var uninstallButton: some View {
@@ -6185,16 +6194,8 @@ struct AgentSoftwareView: View {
                     .foregroundStyle(Color.white.opacity(0.85))
                     .multilineTextAlignment(.leading)
             }
-            .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Color.white.opacity(0.06))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                    )
-            )
+            .padding(.vertical, 2)
         }
     }
 }

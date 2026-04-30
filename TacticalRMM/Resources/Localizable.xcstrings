@@ -4231,6 +4231,7 @@
       }
     },
     "by %@" : {
+      "extractionState" : "stale",
       "localizations" : {
         "nb" : {
           "stringUnit" : {

@@ -89,10 +89,6 @@ struct AgentAuditView: View {
             // Top: author and action label (keeps command out of the top)
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("by \(log.username)")
-                        .font(.caption)
-                        .foregroundStyle(Color.white.opacity(0.7))
-
                     Text(log.action.replacingOccurrences(of: "_", with: " ").capitalized)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Color.white)

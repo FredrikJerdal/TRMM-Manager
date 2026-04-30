@@ -64,9 +64,14 @@ struct Agent: Identifiable, Decodable {
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        agent_id = try c.decode(String.self, forKey: .agent_id)
-        hostname = try c.decode(String.self, forKey: .hostname)
+        
+        // agent_id: required field, but provide fallback to handle missing values
+        agent_id = (try c.decodeIfPresent(String.self, forKey: .agent_id)) ?? UUID().uuidString
+        
+        // hostname: required field, but provide fallback to handle missing values
+        hostname = (try c.decodeIfPresent(String.self, forKey: .hostname)) ?? "Unknown Agent"
 
+        // operating_system: Try multiple possible field names
         if let os = try c.decodeIfPresent(String.self, forKey: .operating_system) {
             operating_system = os
         } else if let osAlt = try c.decodeIfPresent(String.self, forKey: .os) {
@@ -77,6 +82,7 @@ struct Agent: Identifiable, Decodable {
             operating_system = "Unknown OS"
         }
 
+        // cpu_model: Handle array or string formats
         let rawCpu: [String]
         if let cpuArr = try c.decodeIfPresent([String].self, forKey: .cpu_model) {
             rawCpu = cpuArr
@@ -89,6 +95,7 @@ struct Agent: Identifiable, Decodable {
             .map { Agent.normalizeCpuModel($0) }
             .filter { !$0.isEmpty }
 
+        // Optional fields with graceful fallbacks
         description = try c.decodeIfPresent(String.self, forKey: .description)
         public_ip = try c.decodeIfPresent(String.self, forKey: .public_ip)
         local_ips = try c.decodeIfPresent(String.self, forKey: .local_ips)

@@ -11,6 +11,7 @@ struct SettingsView: View {
     @AppStorage("useFaceID") var useFaceID: Bool = false
     @AppStorage("hideSensitive") var hideSensitiveInfo: Bool = false
     @AppStorage("hideCommunityScripts") var hideCommunityScripts: Bool = false
+    @AppStorage("enhancedDiagnostics") var enhancedDiagnostics: Bool = false
     @AppStorage("activeSettingsUUID") private var activeSettingsUUID: String = ""
     @AppStorage("selectedTheme") private var selectedThemeID: String = AppTheme.default.rawValue
     @AppStorage("lastSeenDateFormat") private var lastSeenDateFormat: String = ""
@@ -250,6 +251,19 @@ struct SettingsView: View {
 
                 if !biometricsEnabled {
                     Text(L10n.key("settings.faceIDRequirement"))
+                        .font(.caption2)
+                        .foregroundStyle(Color.white.opacity(0.6))
+                }
+
+                Toggle(isOn: $enhancedDiagnostics) {
+                    Text("Enhanced Diagnostics Logging")
+                        .font(.callout)
+                        .foregroundStyle(Color.white)
+                }
+                .toggleStyle(SwitchToggleStyle(tint: appTheme.accent))
+
+                if enhancedDiagnostics {
+                    Text("Removes character limits and enables extended logging")
                         .font(.caption2)
                         .foregroundStyle(Color.white.opacity(0.6))
                 }

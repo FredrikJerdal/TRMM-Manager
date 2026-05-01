@@ -4,8 +4,16 @@ import UIKit
 final class DiagnosticLogger {
     static let shared = DiagnosticLogger()
 
-    private let maxLinesPerBatch = 500
-    private let maxLinesPerMessage = 1000
+    private let defaultMaxLinesPerBatch = 500
+    private let defaultMaxLinesPerMessage = 1000
+
+    private var maxLinesPerBatch: Int {
+        UserDefaults.standard.bool(forKey: "enhancedDiagnostics") ? Int.max : defaultMaxLinesPerBatch
+    }
+
+    private var maxLinesPerMessage: Int {
+        UserDefaults.standard.bool(forKey: "enhancedDiagnostics") ? Int.max : defaultMaxLinesPerMessage
+    }
 
     private let fileName: String
     private let fileManager = FileManager.default
@@ -69,6 +77,8 @@ final class DiagnosticLogger {
     func logHTTPResponse(method: String, url: String, status: Int, data: Data?) {
         let responseBody: String
         let safeURL = redactAgentIdInUrl(url)
+        let enhancedMode = UserDefaults.standard.bool(forKey: "enhancedDiagnostics")
+        
         if containsSensitiveData(url: url) {
             responseBody = "[REDACTED]"
         } else if let data = data, let responseString = String(data: data, encoding: .utf8) {
@@ -76,15 +86,17 @@ final class DiagnosticLogger {
                 if !responseString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                    (try? JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed])) == nil {
                     let redacted = redactSensitiveData(responseString)
-                    let snippet = redacted.count > 300
-                        ? String(redacted.prefix(300)) + "..."
+                    let maxSnippetLength = enhancedMode ? Int.max : 300
+                    let snippet = redacted.count > maxSnippetLength
+                        ? String(redacted.prefix(maxSnippetLength)) + "..."
                         : redacted
                     appendError("Invalid JSON response for \(method) \(safeURL). Body: \(snippet)")
                 }
                 responseBody = redactSensitiveData(responseString)
             } else {
-                let trimmed = responseString.count > 200
-                    ? String(responseString.prefix(200)) + "..."
+                let maxResponseLength = enhancedMode ? Int.max : 200
+                let trimmed = responseString.count > maxResponseLength
+                    ? String(responseString.prefix(maxResponseLength)) + "..."
                     : responseString
                 responseBody = redactSensitiveData(trimmed)
             }
@@ -120,6 +132,10 @@ final class DiagnosticLogger {
             let version = info["CFBundleShortVersionString"] as? String ?? "N/A"
             let build = info["CFBundleVersion"] as? String ?? "N/A"
             append("App Version: \(version) (build \(build))")
+        }
+        
+        if UserDefaults.standard.bool(forKey: "enhancedDiagnostics") {
+            append("DIAGNOSTIC MODE: Enhanced logging enabled (no character limits)")
         }
     }
 

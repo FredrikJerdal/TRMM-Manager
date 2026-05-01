@@ -6141,6 +6141,9 @@
         }
       }
     },
+    "Enhanced Diagnostics Logging" : {
+
+    },
     "Enter new password" : {
       "localizations" : {
         "en" : {
@@ -7456,6 +7459,9 @@
           }
         }
       }
+    },
+    "Removes character limits and enables extended logging" : {
+
     },
     "Reset" : {
       "localizations" : {

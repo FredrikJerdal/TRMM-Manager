@@ -1,7 +1,7 @@
 [  
   {
     "version": "0.6.2",
-    "description": "Minor UI and translation changes.\n\nAdded agent audit logs.\n\nLowered the timeout interval for API requests to 15 seconds.\n\nFixed issue loading users when SSO is enabled.\n\nAdded a SSO label on user administration.",
+    "description": "Minor UI and translation changes.\n\nAdded agent audit logs.\n\nLowered the timeout interval for API requests to 15 seconds.\n\nFixed issue loading users when SSO is enabled.\n\nAdded a SSO label on user administration.\n\nAdded a new setting to enable enhanced diagnostics.",
     "isCurrent": true
   },
   {

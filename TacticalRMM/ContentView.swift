@@ -259,7 +259,7 @@ struct ContentView: View {
         }
             .alert(L10n.key("connection.endpoint.alert.title"), isPresented: $showApiEndpointAlert) {
                 Button(L10n.key("connection.endpoint.alert.help")) {
-                    if let url = URL(string: "https://trmm-manager.jerdal.no") {
+                    if let url = URL(string: "https://trmm-manager.no") {
                         openURL(url)
                     }
                 }

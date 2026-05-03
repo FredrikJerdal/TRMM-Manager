@@ -464,7 +464,7 @@ struct SettingsView: View {
                 SectionHeader(L10n.key("settings.resources.title"), subtitle: L10n.key("settings.resources.subtitle"), systemImage: "book")
 
                 Button {
-                    if let url = URL(string: "https://trmm-manager.jerdal.no") {
+                    if let url = URL(string: "https://trmm-manager.no") {
                         UIApplication.shared.open(url)
                     }
                 } label: {
